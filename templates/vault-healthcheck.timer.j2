@@ -1,0 +1,9 @@
+[Unit]
+Description=Run Vault healthcheck every {{ healthcheck_interval_sec }} seconds
+
+[Timer]
+OnBootSec=10s
+OnUnitActiveSec={{ healthcheck_interval_sec }}s
+
+[Install]
+WantedBy=timers.target

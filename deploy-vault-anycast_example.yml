@@ -1,0 +1,7 @@
+- hosts: vault_servers
+  become: yes
+  vars:
+    bird_router_id: "{{ inventory_hostname }}" 
+    bird_ospf_password: "OSPF-PASSWORD"
+  roles:
+    - ansible-role-vault-anycast

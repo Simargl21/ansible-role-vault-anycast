@@ -1,0 +1,40 @@
+log syslog all;
+router id {{ bird_router_id }};
+
+protocol device {     
+}
+
+protocol direct {
+    disabled;
+    ipv4;
+}
+
+protocol kernel {
+    ipv4 {
+        import all;
+        export none;
+    };
+}
+
+protocol static static_vault_anycast {
+    ipv4;
+    route {{ anycast_ip }} via {{ bird_router_id }}%{{ bird_ospf_interface }} onlink;
+}
+
+protocol ospf v2 {
+    ipv4 {
+        import all;
+        export where source = RTS_STATIC;
+    };
+    area 0.0.0.0 {
+        interface "{{ bird_ospf_interface }}" {
+            type broadcast;
+            cost {{ bird_ospf_cost }};
+            authentication cryptographic;
+            password "{{ bird_ospf_password }}" {
+                algorithm {{ bird_ospf_auth_algorithm }};
+                id {{ bird_ospf_key_id }};
+            };
+        };
+    };
+}

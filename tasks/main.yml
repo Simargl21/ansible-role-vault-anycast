@@ -1,0 +1,85 @@
+---
+- name: Install BIRD 2.x
+  package:
+    name: bird2
+    state: present
+  notify: restart bird
+
+- name: Ensure /usr/local/bin exists
+  file:
+    path: /usr/local/bin
+    state: directory
+    mode: '0755'
+
+- name: Deploy vault-healthcheck script
+  template:
+    src: vault-healthcheck.sh.j2
+    dest: /usr/local/bin/vault-healthcheck.sh
+    mode: '0755'
+  notify: restart vault-healthcheck timer
+
+- name: Deploy systemd service for healthcheck
+  template:
+    src: vault-healthcheck.service.j2
+    dest: /etc/systemd/system/vault-healthcheck.service
+    mode: '0644'
+  notify: reload systemd
+
+- name: Deploy systemd timer for healthcheck
+  template:
+    src: vault-healthcheck.timer.j2
+    dest: /etc/systemd/system/vault-healthcheck.timer
+    mode: '0644'
+  notify: reload systemd
+
+- name: Ensure anycast IP on loopback (if needed)
+  command: "ip addr add {{ anycast_ip }} dev lo"
+  when: configure_loopback_address
+  changed_when: false
+  ignore_errors: yes   # если уже существует
+
+- name: Persist anycast IP in network config (Ubuntu netplan example)
+  block:
+    - name: Add anycast address to netplan config
+      lineinfile:
+        path: /etc/netplan/01-netcfg.yaml
+        regexp: "{{ anycast_ip }}"
+        line: "            - {{ anycast_ip }}"
+        insertafter: "addresses:"
+      when: ansible_os_family == "Debian"
+  ignore_errors: yes   # не критично, можно сделать вручную
+
+- name: Deploy BIRD configuration
+  template:
+    src: bird.conf.j2
+    dest: /etc/bird/bird.conf
+    mode: '0644'
+    validate: '/usr/sbin/bird -p %s'
+  notify: restart bird
+
+- name: Modify bird.service to depend on vault
+  block:
+    - name: Create override directory
+      file:
+        path: /etc/systemd/system/bird.service.d
+        state: directory
+        mode: '0755'
+    - name: Create override.conf
+      copy:
+        content: |
+          [Unit]
+          After=vault.service
+          Wants=vault.service
+        dest: /etc/systemd/system/bird.service.d/override.conf
+        mode: '0644'
+      notify: reload systemd
+
+- name: Enable and start services
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  loop:
+    - bird
+    - vault-healthcheck.timer

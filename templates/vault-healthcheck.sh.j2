@@ -1,0 +1,31 @@
+#!/bin/bash
+# (C) 2026 Oleg Yakovlev <yakovlev.oleg@gmail.com>, https://net4you.ru. All rights reserved
+# https://github.com/Simargl21/ansible-role-vault-anycast 
+
+# Настройки
+VAULT_ADDR="{{ vault_api_url }}"
+
+# Проверяем Vault через его API health
+# Можно использовать curl, wget, или другие методы
+HEALTH=$(curl --insecure -s -o /dev/null -w "%{http_code}" "$VAULT_ADDR/v1/sys/health")
+
+{% if vault_health_codes_healthy %}
+HEALTHY_CODES="{{ vault_health_codes_healthy | join(' ') }}"
+{% else %}
+# Условие: Vault считается здоровым, если HTTP-код 200 или 429 (unseal выполнен, но узел не leader в кластере)
+HEALTHY_CODES="200 429"
+{% endif %}
+
+if echo "$HEALTHY_CODES" | grep -qw "$HEALTH"; then
+    STATUS=$(birdc show protocols static_vault_anycast 2>/dev/null | awk -v p="static_vault_anycast" '$1 == p {print $4}')
+    if [ "$STATUS" != "up" ]; then
+        birdc enable static_vault_anycast
+        logger -t vault-healthcheck "Enabled static_vault_anycast (Vault healthy, HTTP $HEALTH)"
+    fi
+else
+    STATUS=$(birdc show protocols static_vault_anycast 2>/dev/null | awk -v p="static_vault_anycast" '$1 == p {print $4}')
+    if [ "$STATUS" = "up" ]; then
+        birdc disable static_vault_anycast
+        logger -t vault-healthcheck "Disabled static_vault_anycast (Vault unhealthy, HTTP $HEALTH)"
+    fi
+fi

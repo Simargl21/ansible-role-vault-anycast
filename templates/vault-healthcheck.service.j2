@@ -1,0 +1,8 @@
+[Unit]
+Description=Vault healthcheck for anycast route
+After=bird.service vault.service
+Requires=bird.service vault.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vault-healthcheck.sh

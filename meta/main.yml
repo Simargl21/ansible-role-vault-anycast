@@ -1,0 +1,26 @@
+---
+galaxy_info:
+  author: "Oleg V. Yakovlev"
+  description: "Configure BIRD OSPF anycast for Vault"
+  license: "MIT"
+  min_ansible_version: 2.9
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+    - name: EL
+      versions:
+        - 8
+        - 9
+  galaxy_tags:
+    - networking
+    - bird
+    - ospf
+    - anycast
+    - vault
+dependencies: []
