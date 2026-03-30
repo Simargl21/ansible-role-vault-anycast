@@ -5,7 +5,8 @@ vault_health_codes_healthy: [200, 429]
 healthcheck_interval_sec: 30
 
 # Настройки BIRD
-bird_router_id: "{{ ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0]) }}"
+#bird_router_id: "{{ ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0]) }}"
+
 bird_ospf_cost: 10
 bird_ospf_auth_algorithm: "hmac sha256"
 bird_ospf_key_id: 1

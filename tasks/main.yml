@@ -32,29 +32,34 @@
     mode: '0644'
   notify: reload systemd
 
-- name: Ensure anycast IP on loopback (if needed)
-  command: "ip addr add {{ anycast_ip }} dev lo"
-  when: configure_loopback_address
-  changed_when: false
-  ignore_errors: yes   # если уже существует
+# - name: Ensure anycast IP on loopback (if needed)
+#   command: "ip addr add {{ anycast_ip }} dev lo"
+#   when: configure_loopback_address
+#   changed_when: false
+#   ignore_errors: yes   # если уже существует
 
-- name: Persist anycast IP in network config (Ubuntu netplan example)
-  block:
-    - name: Add anycast address to netplan config
-      lineinfile:
-        path: /etc/netplan/01-netcfg.yaml
-        regexp: "{{ anycast_ip }}"
-        line: "            - {{ anycast_ip }}"
-        insertafter: "addresses:"
-      when: ansible_os_family == "Debian"
-  ignore_errors: yes   # не критично, можно сделать вручную
+# - name: Persist anycast IP in network config (Ubuntu netplan example)
+#   block:
+#     - name: Add anycast address to netplan config
+#       lineinfile:
+#         path: /etc/netplan/01-netcfg.yaml
+#         regexp: "{{ anycast_ip }}"
+#         line: "            - {{ anycast_ip }}"
+#         insertafter: "addresses:"
+#       when: ansible_os_family == "Debian"
+#   ignore_errors: yes   # не критично, можно сделать вручную
+
+- name: Fail if bird_router_id is not a valid IPv4 address
+  fail:
+    msg: "bird_router_id must be a valid IPv4 address, got '{{ bird_router_id }}'"
+  when: bird_router_id is not match('^(\\d{1,3}\\.){3}\\d{1,3}$')
 
 - name: Deploy BIRD configuration
   template:
     src: bird.conf.j2
     dest: /etc/bird/bird.conf
     mode: '0644'
-    validate: '/usr/sbin/bird -p %s'
+    validate: '/usr/sbin/bird -p -c %s'
   notify: restart bird
 
 - name: Modify bird.service to depend on vault
